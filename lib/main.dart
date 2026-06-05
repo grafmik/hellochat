@@ -22,6 +22,8 @@ class HelloChatApp extends StatelessWidget {
   }
 }
 
+// ─── Models ───────────────────────────────────────────────────────────────────
+
 class ChatMessage {
   final String username;
   final String text;
@@ -35,6 +37,15 @@ class ChatMessage {
     this.isOwn = false,
   });
 }
+
+class _HeartData {
+  final int id;
+  final double xDrift;
+  final String emoji;
+  _HeartData(this.id, this.xDrift, this.emoji);
+}
+
+// ─── Live Screen ──────────────────────────────────────────────────────────────
 
 class LiveStreamScreen extends StatefulWidget {
   const LiveStreamScreen({super.key});
@@ -53,67 +64,42 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
   final List<ChatMessage> _messages = [];
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _inputController = TextEditingController();
-  final _random = Random();
 
+  // Hearts
+  final List<_HeartData> _hearts = [];
+  int _nextHeartId = 0;
+  bool _inBurst = false;
+
+  // Simulation
+  final _random = Random();
   Timer? _messageTimer;
   Timer? _viewerTimer;
+  Timer? _heartTimer;  // spawn individuel pendant un burst
+  Timer? _phaseTimer;  // transitions quiet ↔ burst
   int _viewerCount = 1247;
 
   static const _simulatedUsers = [
-    'Alex_B',
-    'Sarah_M',
-    'João99',
-    'YukiChan',
-    'DevMaster',
-    'CoolKid42',
-    'NightOwl',
-    'StarGazer',
-    'TechFan',
-    'MusicLover',
-    'xXDarkXx',
-    'FlutterFan',
-    'Watcher99',
-    'Lila_R',
-    'Mo_streams',
+    'Alex_B', 'Sarah_M', 'João99', 'YukiChan', 'DevMaster',
+    'CoolKid42', 'NightOwl', 'StarGazer', 'TechFan', 'MusicLover',
+    'xXDarkXx', 'FlutterFan', 'Watcher99', 'Lila_R', 'Mo_streams',
   ];
 
   static const _simulatedMessages = [
-    '🔥🔥🔥',
-    'Trop bien !',
-    'Bonjour depuis Paris !',
-    'Premier !',
-    'C\'est incroyable',
-    'Tu nous vois ?',
-    '❤️❤️',
-    'Trop fort',
-    'Super stream',
-    'Allez !!!',
-    'Salut tout le monde !',
-    '👋',
-    'Magnifique !',
-    'Encore !',
-    'GG',
-    '🎉🎉🎉',
-    'oh là là',
-    'meilleur live ever',
-    '💯💯',
-    'trop drôle',
-    'j\'adore ce live',
-    'continuez comme ça !',
-    'vous êtes les meilleurs',
-    'trop stylé 😍',
+    '🔥🔥🔥', 'Trop bien !', 'Bonjour depuis Paris !', 'Premier !',
+    'C\'est incroyable', 'Tu nous vois ?', '❤️❤️', 'Trop fort',
+    'Super stream', 'Allez !!!', 'Salut tout le monde !', '👋',
+    'Magnifique !', 'Encore !', 'GG', '🎉🎉🎉',
+    'oh là là', 'meilleur live ever', '💯💯', 'trop drôle',
+    'j\'adore ce live', 'continuez comme ça !', 'trop stylé 😍',
   ];
 
   static const _userColors = [
-    Colors.pinkAccent,
-    Colors.cyanAccent,
-    Colors.yellowAccent,
-    Colors.greenAccent,
-    Colors.orangeAccent,
-    Colors.purpleAccent,
-    Colors.lightBlueAccent,
-    Colors.tealAccent,
+    Colors.pinkAccent, Colors.cyanAccent, Colors.yellowAccent,
+    Colors.greenAccent, Colors.orangeAccent, Colors.purpleAccent,
+    Colors.lightBlueAccent, Colors.tealAccent,
   ];
+
+  static const _heartEmojis = ['❤️', '🧡', '💛', '💖', '💗', '💜', '🤍'];
 
   @override
   void initState() {
@@ -121,6 +107,8 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
     _initCamera();
     _startSimulation();
   }
+
+  // ── Camera ──
 
   Future<void> _initCamera() async {
     try {
@@ -133,11 +121,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
         (c) => c.lensDirection == CameraLensDirection.front,
         orElse: () => cameras.first,
       );
-      final controller = CameraController(
-        front,
-        ResolutionPreset.high,
-        enableAudio: false,
-      );
+      final controller = CameraController(front, ResolutionPreset.high, enableAudio: false);
       await controller.initialize();
       if (!mounted) return;
       setState(() {
@@ -150,26 +134,71 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
     }
   }
 
+  // ── Simulation ──
+
   void _startSimulation() {
     _messageTimer = Timer.periodic(const Duration(milliseconds: 900), (_) {
-      _addSimulatedMessage();
+      _addMessage(ChatMessage(
+        username: _simulatedUsers[_random.nextInt(_simulatedUsers.length)],
+        text: _simulatedMessages[_random.nextInt(_simulatedMessages.length)],
+        color: _userColors[_random.nextInt(_userColors.length)],
+      ));
     });
+
     _viewerTimer = Timer.periodic(const Duration(seconds: 2), (_) {
       setState(() {
         _viewerCount = (_viewerCount + _random.nextInt(7) - 3).clamp(0, 99999);
       });
     });
+
+    _enterQuiet();
   }
 
-  void _addSimulatedMessage() {
-    _addMessage(
-      ChatMessage(
-        username: _simulatedUsers[_random.nextInt(_simulatedUsers.length)],
-        text: _simulatedMessages[_random.nextInt(_simulatedMessages.length)],
-        color: _userColors[_random.nextInt(_userColors.length)],
-      ),
-    );
+  // ── Phase quiet : silence, puis on déclenche un burst ──
+
+  void _enterQuiet() {
+    _inBurst = false;
+    _heartTimer?.cancel();
+    // Silence de 2 à 6 secondes
+    final ms = 2000 + _random.nextInt(4000);
+    _phaseTimer = Timer(Duration(milliseconds: ms), _enterBurst);
   }
+
+  // ── Phase burst : rafale de cœurs, puis retour quiet ──
+
+  void _enterBurst() {
+    _inBurst = true;
+    // Durée du burst : 1.5 à 4 secondes
+    final burstMs = 1500 + _random.nextInt(2500);
+    _phaseTimer = Timer(Duration(milliseconds: burstMs), _enterQuiet);
+    _scheduleNextHeart();
+  }
+
+  // ── Spawn récursif pendant un burst ──
+
+  void _scheduleNextHeart() {
+    if (!_inBurst) return;
+    // Fréquence proportionnelle aux viewers : 400 viewers ≈ 1 cœur/sec, max 8/sec
+    final heartsPerSecond = (_viewerCount / 400.0).clamp(1.0, 8.0);
+    final baseMs = (1000.0 / heartsPerSecond).round();
+    // Jitter ±40% pour un rythme organique
+    final jitter = (baseMs * 0.4 * _random.nextDouble()).toInt();
+    final delayMs = (baseMs - jitter ~/ 2 + _random.nextInt(jitter + 1)).clamp(100, 1200);
+
+    _heartTimer = Timer(Duration(milliseconds: delayMs), () {
+      if (!_inBurst) return;
+      _spawnHeart();
+      // Au-delà de 3/sec, rafale de 2 cœurs proches
+      if (heartsPerSecond > 3 && _random.nextDouble() > 0.55) {
+        Timer(Duration(milliseconds: 100 + _random.nextInt(150)), () {
+          if (_inBurst) _spawnHeart();
+        });
+      }
+      _scheduleNextHeart();
+    });
+  }
+
+  // ── Chat ──
 
   void _addMessage(ChatMessage msg) {
     setState(() {
@@ -190,26 +219,39 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
   void _sendMessage() {
     final text = _inputController.text.trim();
     if (text.isEmpty) return;
-    _addMessage(
-      ChatMessage(
-        username: 'Vous',
-        text: text,
-        color: Colors.white,
-        isOwn: true,
-      ),
-    );
+    _addMessage(ChatMessage(username: 'Vous', text: text, color: Colors.white, isOwn: true));
     _inputController.clear();
+  }
+
+  // ── Hearts ──
+
+  void _spawnHeart({String? emoji}) {
+    setState(() {
+      _hearts.add(_HeartData(
+        _nextHeartId++,
+        (_random.nextDouble() - 0.5) * 64,
+        emoji ?? _heartEmojis[_random.nextInt(_heartEmojis.length)],
+      ));
+    });
+  }
+
+  void _removeHeart(int id) {
+    if (mounted) setState(() => _hearts.removeWhere((h) => h.id == id));
   }
 
   @override
   void dispose() {
     _messageTimer?.cancel();
     _viewerTimer?.cancel();
+    _heartTimer?.cancel();
+    _phaseTimer?.cancel();
     _cameraController?.dispose();
     _scrollController.dispose();
     _inputController.dispose();
     super.dispose();
   }
+
+  // ── Build ──
 
   @override
   Widget build(BuildContext context) {
@@ -230,6 +272,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
               ],
             ),
           ),
+          _buildHeartsOverlay(),
         ],
       ),
     );
@@ -248,7 +291,6 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
         ),
       );
     }
-
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -262,17 +304,9 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
             ? Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.videocam_off,
-                    color: Colors.white38,
-                    size: 60,
-                  ),
+                  const Icon(Icons.videocam_off, color: Colors.white38, size: 60),
                   const SizedBox(height: 12),
-                  Text(
-                    _cameraError!,
-                    style: const TextStyle(color: Colors.white38),
-                    textAlign: TextAlign.center,
-                  ),
+                  Text(_cameraError!, style: const TextStyle(color: Colors.white38), textAlign: TextAlign.center),
                 ],
               )
             : const CircularProgressIndicator(color: Colors.white30),
@@ -328,10 +362,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
                 hintStyle: const TextStyle(color: Colors.white54),
                 filled: true,
                 fillColor: Colors.white12,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
@@ -340,44 +371,116 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          _ActionButton(
-            icon: Icons.favorite,
-            color: Colors.pinkAccent,
-            onTap: () {},
-          ),
-          const SizedBox(width: 4),
-          _ActionButton(
-            icon: Icons.send,
-            color: Colors.cyanAccent,
-            onTap: _sendMessage,
-          ),
+          _ActionButton(icon: Icons.send, color: Colors.cyanAccent, onTap: _sendMessage),
         ],
       ),
     );
   }
+
+  Widget _buildHeartsOverlay() {
+    return Positioned(
+      right: 12,
+      bottom: 80,
+      child: SizedBox(
+        width: 80,
+        height: 320,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.bottomCenter,
+          children: _hearts
+              .map((h) => _FloatingHeart(
+                    key: ValueKey(h.id),
+                    emoji: h.emoji,
+                    xDrift: h.xDrift,
+                    onComplete: () => _removeHeart(h.id),
+                  ))
+              .toList(),
+        ),
+      ),
+    );
+  }
 }
+
+// ─── Floating Heart ───────────────────────────────────────────────────────────
+
+class _FloatingHeart extends StatefulWidget {
+  final String emoji;
+  final double xDrift;
+  final VoidCallback onComplete;
+
+  const _FloatingHeart({
+    super.key,
+    required this.emoji,
+    required this.xDrift,
+    required this.onComplete,
+  });
+
+  @override
+  State<_FloatingHeart> createState() => _FloatingHeartState();
+}
+
+class _FloatingHeartState extends State<_FloatingHeart> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _y;
+  late final Animation<double> _opacity;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800))
+      ..forward().whenComplete(widget.onComplete);
+
+    _y = Tween<double>(begin: 0, end: -240).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
+    );
+    _opacity = Tween<double>(begin: 1, end: 0).animate(
+      CurvedAnimation(parent: _ctrl, curve: const Interval(0.5, 1.0, curve: Curves.easeIn)),
+    );
+    _scale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.3), weight: 12),
+      TweenSequenceItem(tween: Tween(begin: 1.3, end: 1.0), weight: 8),
+      TweenSequenceItem(tween: ConstantTween(1.0), weight: 80),
+    ]).animate(_ctrl);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, _) => Transform.translate(
+        offset: Offset(widget.xDrift * _ctrl.value, _y.value),
+        child: Opacity(
+          opacity: _opacity.value.clamp(0.0, 1.0),
+          child: Transform.scale(
+            scale: _scale.value,
+            child: Text(widget.emoji, style: const TextStyle(fontSize: 30)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── UI Components ────────────────────────────────────────────────────────────
 
 class _LiveBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.red,
-        borderRadius: BorderRadius.circular(12),
-      ),
+      decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(12)),
       child: const Row(
         children: [
           Icon(Icons.fiber_manual_record, color: Colors.white, size: 8),
           SizedBox(width: 4),
-          Text(
-            'LIVE',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-          ),
+          Text('LIVE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
         ],
       ),
     );
@@ -388,25 +491,18 @@ class _ViewerCount extends StatelessWidget {
   final int count;
   const _ViewerCount({required this.count});
 
-  String _format(int n) =>
-      n >= 1000 ? '${(n / 1000).toStringAsFixed(1)}k' : n.toString();
+  String _format(int n) => n >= 1000 ? '${(n / 1000).toStringAsFixed(1)}k' : n.toString();
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.black45,
-        borderRadius: BorderRadius.circular(12),
-      ),
+      decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(12)),
       child: Row(
         children: [
           const Icon(Icons.remove_red_eye, color: Colors.white70, size: 14),
           const SizedBox(width: 4),
-          Text(
-            _format(count),
-            style: const TextStyle(color: Colors.white, fontSize: 12),
-          ),
+          Text(_format(count), style: const TextStyle(color: Colors.white, fontSize: 12)),
         ],
       ),
     );
@@ -426,10 +522,7 @@ class _StreamerAvatar extends StatelessWidget {
       child: const CircleAvatar(
         radius: 18,
         backgroundColor: Color(0xFF0f3460),
-        child: Text(
-          'M',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        child: Text('S', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
   }
@@ -448,21 +541,14 @@ class _ChatBubble extends StatelessWidget {
             ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
             : EdgeInsets.zero,
         decoration: message.isOwn
-            ? BoxDecoration(
-                color: Colors.white10,
-                borderRadius: BorderRadius.circular(12),
-              )
+            ? BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(12))
             : null,
         child: RichText(
           text: TextSpan(
             children: [
               TextSpan(
                 text: '${message.username} ',
-                style: TextStyle(
-                  color: message.color,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
+                style: TextStyle(color: message.color, fontWeight: FontWeight.bold, fontSize: 13),
               ),
               TextSpan(
                 text: message.text,
@@ -480,11 +566,7 @@ class _ActionButton extends StatelessWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
-  const _ActionButton({
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
+  const _ActionButton({required this.icon, required this.color, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -492,10 +574,7 @@ class _ActionButton extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(10),
-        decoration: const BoxDecoration(
-          color: Colors.white12,
-          shape: BoxShape.circle,
-        ),
+        decoration: const BoxDecoration(color: Colors.white12, shape: BoxShape.circle),
         child: Icon(icon, color: color, size: 22),
       ),
     );
