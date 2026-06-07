@@ -24,6 +24,39 @@ class HelloChatApp extends StatelessWidget {
 
 // ─── Models ───────────────────────────────────────────────────────────────────
 
+class _UserProfile {
+  final String username;
+  final Color color;
+  final int? avatarIndex; // null = initiale
+
+  const _UserProfile({required this.username, required this.color, this.avatarIndex});
+}
+
+const _profiles = [
+  _UserProfile(username: 'alex_brt',    color: Colors.pinkAccent,      avatarIndex: 12),
+  _UserProfile(username: 'Sarah_M',     color: Colors.cyanAccent,       avatarIndex: 45),
+  _UserProfile(username: 'jo_99',       color: Colors.yellowAccent,     avatarIndex: null),
+  _UserProfile(username: 'YukiChan',    color: Colors.purpleAccent,     avatarIndex: 78),
+  _UserProfile(username: 'devmaster42', color: Colors.greenAccent,      avatarIndex: 130),
+  _UserProfile(username: 'CoolKid',     color: Colors.orangeAccent,     avatarIndex: null),
+  _UserProfile(username: 'nightowl__',  color: Colors.lightBlueAccent,  avatarIndex: 200),
+  _UserProfile(username: 'StarGazer',   color: Colors.tealAccent,       avatarIndex: 33),
+  _UserProfile(username: 'tech_fan',    color: Colors.pinkAccent,       avatarIndex: 99),
+  _UserProfile(username: 'MusicLvr',    color: Colors.cyanAccent,       avatarIndex: null),
+  _UserProfile(username: 'xXDarkXx',   color: Colors.purpleAccent,     avatarIndex: 150),
+  _UserProfile(username: 'flutterfan', color: Colors.greenAccent,      avatarIndex: 17),
+  _UserProfile(username: 'Watcher99',   color: Colors.orangeAccent,     avatarIndex: 210),
+  _UserProfile(username: 'lila_r',      color: Colors.yellowAccent,     avatarIndex: null),
+  _UserProfile(username: 'mo_streams',  color: Colors.lightBlueAccent,  avatarIndex: 64),
+  _UserProfile(username: 'Lucas_off',   color: Colors.tealAccent,       avatarIndex: 188),
+  _UserProfile(username: 'noemie.live', color: Colors.pinkAccent,       avatarIndex: 7),
+  _UserProfile(username: 'raptor77',    color: Colors.cyanAccent,       avatarIndex: null),
+  _UserProfile(username: 'Clem_B',      color: Colors.orangeAccent,     avatarIndex: 240),
+  _UserProfile(username: 'kev_gaming',  color: Colors.greenAccent,      avatarIndex: 55),
+  _UserProfile(username: 'ZoeR',        color: Colors.purpleAccent,     avatarIndex: null),
+  _UserProfile(username: 'theovlive',   color: Colors.yellowAccent,     avatarIndex: 120),
+];
+
 class ChatMessage {
   final String username;
   final String text;
@@ -80,24 +113,6 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
   Timer? _phaseTimer; // transitions quiet ↔ burst
   int _viewerCount = 1247;
 
-  static const _simulatedUsers = [
-    'Alex_B',
-    'Sarah_M',
-    'João99',
-    'YukiChan',
-    'DevMaster',
-    'CoolKid42',
-    'NightOwl',
-    'StarGazer',
-    'TechFan',
-    'MusicLover',
-    'xXDarkXx',
-    'FlutterFan',
-    'Watcher99',
-    'Lila_R',
-    'Mo_streams',
-  ];
-
   static const _simulatedMessages = [
     '🔥🔥🔥',
     'Trop bien !',
@@ -122,17 +137,6 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
     'j\'adore ce live',
     'continuez comme ça !',
     'trop stylé 😍',
-  ];
-
-  static const _userColors = [
-    Colors.pinkAccent,
-    Colors.cyanAccent,
-    Colors.yellowAccent,
-    Colors.greenAccent,
-    Colors.orangeAccent,
-    Colors.purpleAccent,
-    Colors.lightBlueAccent,
-    Colors.tealAccent,
   ];
 
   static const _heartEmojis = ['❤️', '🧡', '💛', '💖', '💗', '💜', '🤍'];
@@ -178,13 +182,13 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
 
   void _startSimulation() {
     _messageTimer = Timer.periodic(const Duration(milliseconds: 900), (_) {
-      final hasAvatar = _random.nextDouble() > 0.35;
+      final profile = _profiles[_random.nextInt(_profiles.length)];
       _addMessage(
         ChatMessage(
-          username: _simulatedUsers[_random.nextInt(_simulatedUsers.length)],
+          username: profile.username,
           text: _simulatedMessages[_random.nextInt(_simulatedMessages.length)],
-          color: _userColors[_random.nextInt(_userColors.length)],
-          avatarIndex: hasAvatar ? _random.nextInt(256) : null,
+          color: profile.color,
+          avatarIndex: profile.avatarIndex,
         ),
       );
     });
