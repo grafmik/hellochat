@@ -253,13 +253,13 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
 
   void _addMessage(ChatMessage msg) {
     setState(() {
-      _messages.add(msg);
-      if (_messages.length > 60) _messages.removeAt(0);
+      _messages.insert(0, msg);
+      if (_messages.length > 60) _messages.removeLast();
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
+          0,
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeOut,
         );
@@ -407,6 +407,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
       height: MediaQuery.of(context).size.height * 0.35,
       child: ListView.builder(
         controller: _scrollController,
+        reverse: true,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         itemCount: _messages.length,
         itemBuilder: (_, i) => _ChatBubble(message: _messages[i]),
