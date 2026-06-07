@@ -252,18 +252,24 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
   // ── Chat ──
 
   void _addMessage(ChatMessage msg) {
+    final double oldMax = _scrollController.hasClients
+        ? _scrollController.position.maxScrollExtent
+        : 0.0;
+
     setState(() {
       _messages.insert(0, msg);
       if (_messages.length > 60) _messages.removeLast();
     });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          0,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
-        );
-      }
+      if (!_scrollController.hasClients) return;
+      final delta = _scrollController.position.maxScrollExtent - oldMax;
+      if (delta > 0) _scrollController.jumpTo(delta);
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
     });
   }
 
