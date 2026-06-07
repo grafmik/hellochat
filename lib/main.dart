@@ -403,14 +403,23 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
   }
 
   Widget _buildChatArea() {
-    return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.35,
-      child: ListView.builder(
-        controller: _scrollController,
-        reverse: true,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        itemCount: _messages.length,
-        itemBuilder: (_, i) => _ChatBubble(message: _messages[i]),
+    return ShaderMask(
+      shaderCallback: (bounds) => const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Colors.transparent, Colors.black],
+        stops: [0.0, 0.25],
+      ).createShader(bounds),
+      blendMode: BlendMode.dstIn,
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.35,
+        child: ListView.builder(
+          controller: _scrollController,
+          reverse: true,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          itemCount: _messages.length,
+          itemBuilder: (_, i) => _ChatBubble(message: _messages[i]),
+        ),
       ),
     );
   }
