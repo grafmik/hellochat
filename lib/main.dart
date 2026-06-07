@@ -29,12 +29,14 @@ class ChatMessage {
   final String text;
   final Color color;
   final bool isOwn;
+  final int? avatarIndex; // null = initiale, 0-255 = cellule de avatar_grid.png
 
   const ChatMessage({
     required this.username,
     required this.text,
     required this.color,
     this.isOwn = false,
+    this.avatarIndex,
   });
 }
 
@@ -74,29 +76,63 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
   final _random = Random();
   Timer? _messageTimer;
   Timer? _viewerTimer;
-  Timer? _heartTimer;  // spawn individuel pendant un burst
-  Timer? _phaseTimer;  // transitions quiet ↔ burst
+  Timer? _heartTimer; // spawn individuel pendant un burst
+  Timer? _phaseTimer; // transitions quiet ↔ burst
   int _viewerCount = 1247;
 
   static const _simulatedUsers = [
-    'Alex_B', 'Sarah_M', 'João99', 'YukiChan', 'DevMaster',
-    'CoolKid42', 'NightOwl', 'StarGazer', 'TechFan', 'MusicLover',
-    'xXDarkXx', 'FlutterFan', 'Watcher99', 'Lila_R', 'Mo_streams',
+    'Alex_B',
+    'Sarah_M',
+    'João99',
+    'YukiChan',
+    'DevMaster',
+    'CoolKid42',
+    'NightOwl',
+    'StarGazer',
+    'TechFan',
+    'MusicLover',
+    'xXDarkXx',
+    'FlutterFan',
+    'Watcher99',
+    'Lila_R',
+    'Mo_streams',
   ];
 
   static const _simulatedMessages = [
-    '🔥🔥🔥', 'Trop bien !', 'Bonjour depuis Paris !', 'Premier !',
-    'C\'est incroyable', 'Tu nous vois ?', '❤️❤️', 'Trop fort',
-    'Super stream', 'Allez !!!', 'Salut tout le monde !', '👋',
-    'Magnifique !', 'Encore !', 'GG', '🎉🎉🎉',
-    'oh là là', 'meilleur live ever', '💯💯', 'trop drôle',
-    'j\'adore ce live', 'continuez comme ça !', 'trop stylé 😍',
+    '🔥🔥🔥',
+    'Trop bien !',
+    'Bonjour depuis Paris !',
+    'Premier !',
+    'C\'est incroyable',
+    'Tu nous vois ?',
+    '❤️❤️',
+    'Trop fort',
+    'Super stream',
+    'Allez !!!',
+    'Salut tout le monde !',
+    '👋',
+    'Magnifique !',
+    'Encore !',
+    'GG',
+    '🎉🎉🎉',
+    'oh là là',
+    'meilleur live ever',
+    '💯💯',
+    'trop drôle',
+    'j\'adore ce live',
+    'continuez comme ça !',
+    'trop stylé 😍',
   ];
 
   static const _userColors = [
-    Colors.pinkAccent, Colors.cyanAccent, Colors.yellowAccent,
-    Colors.greenAccent, Colors.orangeAccent, Colors.purpleAccent,
-    Colors.lightBlueAccent, Colors.tealAccent,
+    Colors.pinkAccent,
+    Colors.cyanAccent,
+    Colors.yellowAccent,
+    Colors.greenAccent,
+    Colors.orangeAccent,
+    Colors.purpleAccent,
+    Colors.lightBlueAccent,
+    Colors.tealAccent,
   ];
 
   static const _heartEmojis = ['❤️', '🧡', '💛', '💖', '💗', '💜', '🤍'];
@@ -121,7 +157,11 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
         (c) => c.lensDirection == CameraLensDirection.front,
         orElse: () => cameras.first,
       );
-      final controller = CameraController(front, ResolutionPreset.high, enableAudio: false);
+      final controller = CameraController(
+        front,
+        ResolutionPreset.high,
+        enableAudio: false,
+      );
       await controller.initialize();
       if (!mounted) return;
       setState(() {
@@ -138,11 +178,15 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
 
   void _startSimulation() {
     _messageTimer = Timer.periodic(const Duration(milliseconds: 900), (_) {
-      _addMessage(ChatMessage(
-        username: _simulatedUsers[_random.nextInt(_simulatedUsers.length)],
-        text: _simulatedMessages[_random.nextInt(_simulatedMessages.length)],
-        color: _userColors[_random.nextInt(_userColors.length)],
-      ));
+      final hasAvatar = _random.nextDouble() > 0.35;
+      _addMessage(
+        ChatMessage(
+          username: _simulatedUsers[_random.nextInt(_simulatedUsers.length)],
+          text: _simulatedMessages[_random.nextInt(_simulatedMessages.length)],
+          color: _userColors[_random.nextInt(_userColors.length)],
+          avatarIndex: hasAvatar ? _random.nextInt(256) : null,
+        ),
+      );
     });
 
     _viewerTimer = Timer.periodic(const Duration(seconds: 2), (_) {
@@ -183,7 +227,10 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
     final baseMs = (1000.0 / heartsPerSecond).round();
     // Jitter ±40% pour un rythme organique
     final jitter = (baseMs * 0.4 * _random.nextDouble()).toInt();
-    final delayMs = (baseMs - jitter ~/ 2 + _random.nextInt(jitter + 1)).clamp(100, 1200);
+    final delayMs = (baseMs - jitter ~/ 2 + _random.nextInt(jitter + 1)).clamp(
+      100,
+      1200,
+    );
 
     _heartTimer = Timer(Duration(milliseconds: delayMs), () {
       if (!_inBurst) return;
@@ -219,7 +266,14 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
   void _sendMessage() {
     final text = _inputController.text.trim();
     if (text.isEmpty) return;
-    _addMessage(ChatMessage(username: 'Vous', text: text, color: Colors.white, isOwn: true));
+    _addMessage(
+      ChatMessage(
+        username: 'Vous',
+        text: text,
+        color: Colors.white,
+        isOwn: true,
+      ),
+    );
     _inputController.clear();
   }
 
@@ -227,11 +281,13 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
 
   void _spawnHeart({String? emoji}) {
     setState(() {
-      _hearts.add(_HeartData(
-        _nextHeartId++,
-        (_random.nextDouble() - 0.5) * 64,
-        emoji ?? _heartEmojis[_random.nextInt(_heartEmojis.length)],
-      ));
+      _hearts.add(
+        _HeartData(
+          _nextHeartId++,
+          (_random.nextDouble() - 0.5) * 64,
+          emoji ?? _heartEmojis[_random.nextInt(_heartEmojis.length)],
+        ),
+      );
     });
   }
 
@@ -304,9 +360,17 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
             ? Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.videocam_off, color: Colors.white38, size: 60),
+                  const Icon(
+                    Icons.videocam_off,
+                    color: Colors.white38,
+                    size: 60,
+                  ),
                   const SizedBox(height: 12),
-                  Text(_cameraError!, style: const TextStyle(color: Colors.white38), textAlign: TextAlign.center),
+                  Text(
+                    _cameraError!,
+                    style: const TextStyle(color: Colors.white38),
+                    textAlign: TextAlign.center,
+                  ),
                 ],
               )
             : const CircularProgressIndicator(color: Colors.white30),
@@ -362,7 +426,10 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
                 hintStyle: const TextStyle(color: Colors.white54),
                 filled: true,
                 fillColor: Colors.white12,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
@@ -371,7 +438,11 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          _ActionButton(icon: Icons.send, color: Colors.cyanAccent, onTap: _sendMessage),
+          _ActionButton(
+            icon: Icons.send,
+            color: Colors.cyanAccent,
+            onTap: _sendMessage,
+          ),
         ],
       ),
     );
@@ -388,12 +459,14 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
           clipBehavior: Clip.none,
           alignment: Alignment.bottomCenter,
           children: _hearts
-              .map((h) => _FloatingHeart(
-                    key: ValueKey(h.id),
-                    emoji: h.emoji,
-                    xDrift: h.xDrift,
-                    onComplete: () => _removeHeart(h.id),
-                  ))
+              .map(
+                (h) => _FloatingHeart(
+                  key: ValueKey(h.id),
+                  emoji: h.emoji,
+                  xDrift: h.xDrift,
+                  onComplete: () => _removeHeart(h.id),
+                ),
+              )
               .toList(),
         ),
       ),
@@ -419,7 +492,8 @@ class _FloatingHeart extends StatefulWidget {
   State<_FloatingHeart> createState() => _FloatingHeartState();
 }
 
-class _FloatingHeartState extends State<_FloatingHeart> with SingleTickerProviderStateMixin {
+class _FloatingHeartState extends State<_FloatingHeart>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _y;
   late final Animation<double> _opacity;
@@ -428,14 +502,20 @@ class _FloatingHeartState extends State<_FloatingHeart> with SingleTickerProvide
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800))
-      ..forward().whenComplete(widget.onComplete);
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..forward().whenComplete(widget.onComplete);
 
-    _y = Tween<double>(begin: 0, end: -240).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
-    );
+    _y = Tween<double>(
+      begin: 0,
+      end: -240,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
     _opacity = Tween<double>(begin: 1, end: 0).animate(
-      CurvedAnimation(parent: _ctrl, curve: const Interval(0.5, 1.0, curve: Curves.easeIn)),
+      CurvedAnimation(
+        parent: _ctrl,
+        curve: const Interval(0.5, 1.0, curve: Curves.easeIn),
+      ),
     );
     _scale = TweenSequence<double>([
       TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.3), weight: 12),
@@ -475,12 +555,22 @@ class _LiveBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        color: Colors.red,
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: const Row(
         children: [
           Icon(Icons.fiber_manual_record, color: Colors.white, size: 8),
           SizedBox(width: 4),
-          Text('LIVE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+          Text(
+            'LIVE',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
         ],
       ),
     );
@@ -491,18 +581,25 @@ class _ViewerCount extends StatelessWidget {
   final int count;
   const _ViewerCount({required this.count});
 
-  String _format(int n) => n >= 1000 ? '${(n / 1000).toStringAsFixed(1)}k' : n.toString();
+  String _format(int n) =>
+      n >= 1000 ? '${(n / 1000).toStringAsFixed(1)}k' : n.toString();
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        color: Colors.black45,
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Row(
         children: [
           const Icon(Icons.remove_red_eye, color: Colors.white70, size: 14),
           const SizedBox(width: 4),
-          Text(_format(count), style: const TextStyle(color: Colors.white, fontSize: 12)),
+          Text(
+            _format(count),
+            style: const TextStyle(color: Colors.white, fontSize: 12),
+          ),
         ],
       ),
     );
@@ -522,7 +619,10 @@ class _StreamerAvatar extends StatelessWidget {
       child: const CircleAvatar(
         radius: 18,
         backgroundColor: Color(0xFF0f3460),
-        child: Text('S', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        child: Text(
+          'S',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }
@@ -535,26 +635,84 @@ class _ChatBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Container(
-        padding: message.isOwn
-            ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
-            : EdgeInsets.zero,
-        decoration: message.isOwn
-            ? BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(12))
-            : null,
-        child: RichText(
-          text: TextSpan(
-            children: [
-              TextSpan(
-                text: '${message.username} ',
-                style: TextStyle(color: message.color, fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-              TextSpan(
-                text: message.text,
-                style: const TextStyle(color: Colors.white, fontSize: 13),
-              ),
-            ],
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildAvatar(),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  message.username,
+                  style: TextStyle(
+                    color: message.color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                Text(
+                  message.text,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatar() {
+    if (message.avatarIndex != null) {
+      return _GridAvatar(index: message.avatarIndex!);
+    }
+    return CircleAvatar(
+      radius: 16,
+      backgroundColor: message.color.withValues(alpha: 0.25),
+      child: Text(
+        message.username[0].toUpperCase(),
+        style: TextStyle(
+          color: message.color,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+}
+
+// Affiche une cellule de la grille avatar_grid.png (16×16 cellules de 128px)
+class _GridAvatar extends StatelessWidget {
+  final int index; // 0–255
+  static const double size = 32;
+
+  const _GridAvatar({required this.index});
+
+  @override
+  Widget build(BuildContext context) {
+    final row = index ~/ 16;
+    final col = index % 16;
+    final totalSize = size * 16; // image entière à cette échelle
+
+    return ClipOval(
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: OverflowBox(
+          maxWidth: totalSize,
+          maxHeight: totalSize,
+          alignment: Alignment.topLeft,
+          child: Transform.translate(
+            offset: Offset(-col * size, -row * size),
+            child: Image.asset(
+              'assets/avatar_grid.png',
+              width: totalSize,
+              height: totalSize,
+              filterQuality: FilterQuality.medium,
+            ),
           ),
         ),
       ),
@@ -566,7 +724,11 @@ class _ActionButton extends StatelessWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
-  const _ActionButton({required this.icon, required this.color, required this.onTap});
+  const _ActionButton({
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -574,7 +736,10 @@ class _ActionButton extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(10),
-        decoration: const BoxDecoration(color: Colors.white12, shape: BoxShape.circle),
+        decoration: const BoxDecoration(
+          color: Colors.white12,
+          shape: BoxShape.circle,
+        ),
         child: Icon(icon, color: color, size: 22),
       ),
     );
