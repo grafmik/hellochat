@@ -254,16 +254,31 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
 
   void _addMessage(ChatMessage msg) {
     _messages.insert(0, msg);
-    _listKey.currentState?.insertItem(0, duration: const Duration(milliseconds: 250));
+    _listKey.currentState?.insertItem(0, duration: const Duration(milliseconds: 300));
 
     if (_messages.length > 60) {
-      final removed = _messages.removeLast();
+      final removed = _messages.removeAt(60);
       _listKey.currentState?.removeItem(
         60,
-        (_, _) => _ChatBubble(message: removed),
+        (_, animation) => _buildChatItem(removed, animation),
         duration: Duration.zero,
       );
     }
+  }
+
+  Widget _buildChatItem(ChatMessage message, Animation<double> animation) {
+    final curved = CurvedAnimation(parent: animation, curve: Curves.easeOut);
+    return SizeTransition(
+      sizeFactor: curved,
+      alignment: AlignmentDirectional(-1.0, 1.0),
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 1),
+          end: Offset.zero,
+        ).animate(curved),
+        child: _ChatBubble(message: message),
+      ),
+    );
   }
 
   void _sendMessage() {
@@ -418,10 +433,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
           reverse: true,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           initialItemCount: _messages.length,
-          itemBuilder: (_, i, animation) => SizeTransition(
-            sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-            child: _ChatBubble(message: _messages[i]),
-          ),
+          itemBuilder: (_, i, animation) => _buildChatItem(_messages[i], animation),
         ),
       ),
     );
