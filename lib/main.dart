@@ -97,6 +97,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
 
   // Chat
   final List<ChatMessage> _messages = [];
+  final GlobalKey<AnimatedListState> _listKey = GlobalKey();
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _inputController = TextEditingController();
 
@@ -252,25 +253,17 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
   // ── Chat ──
 
   void _addMessage(ChatMessage msg) {
-    final double oldMax = _scrollController.hasClients
-        ? _scrollController.position.maxScrollExtent
-        : 0.0;
+    _messages.insert(0, msg);
+    _listKey.currentState?.insertItem(0, duration: const Duration(milliseconds: 250));
 
-    setState(() {
-      _messages.insert(0, msg);
-      if (_messages.length > 60) _messages.removeLast();
-    });
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_scrollController.hasClients) return;
-      final delta = _scrollController.position.maxScrollExtent - oldMax;
-      if (delta > 0) _scrollController.jumpTo(delta);
-      _scrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
+    if (_messages.length > 60) {
+      final removed = _messages.removeLast();
+      _listKey.currentState?.removeItem(
+        60,
+        (_, _) => _ChatBubble(message: removed),
+        duration: Duration.zero,
       );
-    });
+    }
   }
 
   void _sendMessage() {
@@ -419,12 +412,16 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
       blendMode: BlendMode.dstIn,
       child: SizedBox(
         height: MediaQuery.of(context).size.height * 0.35,
-        child: ListView.builder(
+        child: AnimatedList(
+          key: _listKey,
           controller: _scrollController,
           reverse: true,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          itemCount: _messages.length,
-          itemBuilder: (_, i) => _ChatBubble(message: _messages[i]),
+          initialItemCount: _messages.length,
+          itemBuilder: (_, i, animation) => SizeTransition(
+            sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+            child: _ChatBubble(message: _messages[i]),
+          ),
         ),
       ),
     );
