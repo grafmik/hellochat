@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models.dart';
 import '../widgets/chat_bubble.dart';
@@ -238,12 +239,17 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
 
   Widget _buildBackground() {
     if (_isCameraReady && _cameraController != null) {
+      // Sur mobile, CameraPreview applique une rotation interne (capteur en
+      // mode paysage affiché en portrait) sans ajuster `aspectRatio`, qui
+      // reste donc dans l'orientation paysage : on l'inverse pour obtenir le
+      // ratio réellement affiché. Sur web, aucune rotation n'est appliquée.
+      final cameraAspectRatio = kIsWeb
+          ? _cameraController!.value.aspectRatio
+          : 1 / _cameraController!.value.aspectRatio;
       return SizedBox.expand(
-        child: FittedBox(
-          fit: BoxFit.cover,
-          child: SizedBox(
-            width: _cameraController!.value.previewSize!.height,
-            height: _cameraController!.value.previewSize!.width,
+        child: Center(
+          child: AspectRatio(
+            aspectRatio: cameraAspectRatio,
             child: CameraPreview(_cameraController!),
           ),
         ),
