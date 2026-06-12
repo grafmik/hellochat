@@ -64,10 +64,20 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
                         value: _showProfile,
                         onChanged: (v) => setState(() => _showProfile = v),
                       ),
-                      if (_showProfile) ...[
-                        const SizedBox(height: 12),
-                        _buildProfileEditor(),
-                      ],
+                      AnimatedCrossFade(
+                        duration: const Duration(milliseconds: 250),
+                        sizeCurve: Curves.easeInOut,
+                        firstChild: const SizedBox(width: double.infinity),
+                        secondChild: Column(
+                          children: [
+                            const SizedBox(height: 12),
+                            _buildProfileEditor(),
+                          ],
+                        ),
+                        crossFadeState: _showProfile
+                            ? CrossFadeState.showSecond
+                            : CrossFadeState.showFirst,
+                      ),
                       const SizedBox(height: 12),
                       _ToggleItem(
                         icon: Icons.verified_outlined,
