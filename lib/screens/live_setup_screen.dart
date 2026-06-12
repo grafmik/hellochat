@@ -44,7 +44,7 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
                     const SizedBox(width: 4),
                     const Expanded(
                       child: Text(
-                        'Comment jouer',
+                        'Retour',
                         style: TextStyle(
                           color: accentColor,
                           fontSize: 24,
@@ -89,7 +89,6 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
                       _ToggleItem(
                         icon: Icons.videocam_outlined,
                         label: 'Enregistrer',
-                        subtitle: "(l'IA ne fonctionnera pas pendant l'enregistrement)",
                         value: _record,
                         onChanged: (v) => setState(() => _record = v),
                       ),
@@ -291,14 +290,12 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
 class _ToggleItem extends StatelessWidget {
   final IconData icon;
   final String label;
-  final String? subtitle;
   final bool value;
   final ValueChanged<bool> onChanged;
 
   const _ToggleItem({
     required this.icon,
     required this.label,
-    this.subtitle,
     required this.value,
     required this.onChanged,
   });
@@ -312,34 +309,21 @@ class _ToggleItem extends StatelessWidget {
         color: Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Icon(icon, color: accentColor, size: 22),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              Switch(value: value, onChanged: onChanged, activeThumbColor: accentColor),
-            ],
-          ),
-          if (subtitle != null)
-            Padding(
-              padding: const EdgeInsets.only(left: 38, bottom: 10),
-              child: Text(
-                subtitle!,
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12),
+          Icon(icon, color: accentColor, size: 22),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
               ),
             ),
+          ),
+          Switch(value: value, onChanged: onChanged, activeThumbColor: accentColor),
         ],
       ),
     );
