@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/live_stream_screen.dart';
+import 'screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,7 +15,7 @@ class HelloChatApp extends StatelessWidget {
       title: 'HelloChat Live',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
-      home: const LiveStreamScreen(),
+      home: const HomeScreen(),
     );
   }
 }

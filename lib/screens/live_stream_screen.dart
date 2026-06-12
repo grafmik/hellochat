@@ -4,6 +4,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models.dart';
+import '../theme.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/floating_heart.dart';
 import '../widgets/live_ui.dart';
@@ -256,13 +257,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
       );
     }
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF1a1a2e), Color(0xFF16213e), Color(0xFF0f3460)],
-        ),
-      ),
+      decoration: const BoxDecoration(gradient: appBackgroundGradient),
       child: Center(
         child: _cameraError != null
             ? Column(
@@ -295,7 +290,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
           const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.close, color: Colors.white),
-            onPressed: () {},
+            onPressed: () => Navigator.of(context).maybePop(),
           ),
         ],
       ),
