@@ -49,7 +49,7 @@ class ChatMessage {
   });
 }
 
-const simulatedMessages = [
+final List<String> simulatedMessages = [
   '🔥🔥🔥',
   'Trop bien !',
   'Bonjour depuis Paris !',
