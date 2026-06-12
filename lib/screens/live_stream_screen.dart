@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:gal/gal.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets/chat_bubble.dart';
@@ -17,7 +19,9 @@ class _HeartData {
 }
 
 class LiveStreamScreen extends StatefulWidget {
-  const LiveStreamScreen({super.key});
+  final bool record;
+
+  const LiveStreamScreen({super.key, this.record = false});
 
   @override
   State<LiveStreamScreen> createState() => _LiveStreamScreenState();
@@ -71,9 +75,12 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
       final controller = CameraController(
         front,
         ResolutionPreset.high,
-        enableAudio: false,
+        enableAudio: widget.record,
       );
       await controller.initialize();
+      if (widget.record) {
+        await controller.startVideoRecording();
+      }
       if (!mounted) return;
       setState(() {
         _cameraController = controller;
@@ -82,6 +89,30 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _cameraError = e.toString());
+    }
+  }
+
+  Future<void> _stopRecordingAndSave() async {
+    final controller = _cameraController;
+    if (controller == null || !controller.value.isRecordingVideo) return;
+    try {
+      final file = await controller.stopVideoRecording();
+      if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) {
+        await file.saveTo(file.name);
+      } else {
+        await Gal.putVideo(file.path, album: 'HelloChat Live');
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Vidéo enregistrée dans la galerie')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erreur lors de l'enregistrement : $e")),
+        );
+      }
     }
   }
 
@@ -215,25 +246,34 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      resizeToAvoidBottomInset: true,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          _buildBackground(),
-          SafeArea(
-            child: Column(
-              children: [
-                _buildTopBar(),
-                const Spacer(),
-                _buildChatArea(),
-                _buildInputBar(),
-              ],
+    final isRecording = _cameraController?.value.isRecordingVideo ?? false;
+    return PopScope(
+      canPop: !isRecording,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await _stopRecordingAndSave();
+        if (context.mounted) Navigator.of(context).pop();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        resizeToAvoidBottomInset: true,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            _buildBackground(),
+            SafeArea(
+              child: Column(
+                children: [
+                  _buildTopBar(),
+                  const Spacer(),
+                  _buildChatArea(),
+                  _buildInputBar(),
+                ],
+              ),
             ),
-          ),
-          _buildHeartsOverlay(),
-        ],
+            _buildHeartsOverlay(),
+          ],
+        ),
       ),
     );
   }

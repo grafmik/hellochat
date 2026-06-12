@@ -272,7 +272,7 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const LiveStreamScreen()),
+          MaterialPageRoute(builder: (_) => LiveStreamScreen(record: _record)),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: accentColor,

@@ -4,6 +4,10 @@
 <dict>
 	<key>NSCameraUsageDescription</key>
 	<string>La caméra est utilisée pour diffuser votre live.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Le micro est utilisé pour enregistrer le son de votre live.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Pour enregistrer la vidéo de votre live dans votre galerie.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
