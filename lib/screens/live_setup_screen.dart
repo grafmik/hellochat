@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models.dart';
 import '../theme.dart';
 import 'edit_comments_screen.dart';
 import 'live_stream_screen.dart';
@@ -18,6 +19,9 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
   bool _audienceDonations = false;
   double _viewerTarget = 50;
   final _pseudoController = TextEditingController();
+
+  // Le passage en VIP n'est pas encore implémenté : compte standard par défaut.
+  static const _accountType = AccountType.standard;
 
   @override
   void dispose() {
@@ -216,14 +220,14 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
           Padding(
             padding: const EdgeInsets.only(left: 38, top: 2),
             child: Text(
-              '${_viewerTarget.round()} (0 - 150)',
+              '${_viewerTarget.round()} (0 - ${_accountType.maxViewers})',
               style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13),
             ),
           ),
           Slider(
             value: _viewerTarget,
             min: 0,
-            max: 150,
+            max: _accountType.maxViewers.toDouble(),
             activeColor: accentColor,
             inactiveColor: Colors.white24,
             onChanged: (v) => setState(() => _viewerTarget = v),
@@ -272,7 +276,13 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => LiveStreamScreen(record: _record)),
+          MaterialPageRoute(
+            builder: (_) => LiveStreamScreen(
+              record: _record,
+              initialViewerCount: _viewerTarget.round(),
+              accountType: _accountType,
+            ),
+          ),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: accentColor,

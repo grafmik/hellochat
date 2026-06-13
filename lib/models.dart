@@ -1,5 +1,15 @@
 import 'package:flutter/material.dart';
 
+enum AccountType { standard, vip }
+
+extension AccountTypeLimits on AccountType {
+  /// Nombre maximal de spectateurs autorisé pour ce type de compte.
+  int get maxViewers => switch (this) {
+        AccountType.standard => 150,
+        AccountType.vip => 100000,
+      };
+}
+
 class UserProfile {
   final String username;
   final Color color;

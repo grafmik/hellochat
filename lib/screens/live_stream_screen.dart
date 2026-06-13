@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_volume_controller/flutter_volume_controller.dart';
 import 'package:gal/gal.dart';
 import '../models.dart';
 import '../theme.dart';
@@ -20,8 +21,15 @@ class _HeartData {
 
 class LiveStreamScreen extends StatefulWidget {
   final bool record;
+  final int initialViewerCount;
+  final AccountType accountType;
 
-  const LiveStreamScreen({super.key, this.record = false});
+  const LiveStreamScreen({
+    super.key,
+    this.record = false,
+    this.initialViewerCount = 1247,
+    this.accountType = AccountType.standard,
+  });
 
   @override
   State<LiveStreamScreen> createState() => _LiveStreamScreenState();
@@ -50,13 +58,22 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
   Timer? _viewerTimer;
   Timer? _heartTimer;
   Timer? _phaseTimer;
-  int _viewerCount = 1247;
+  late int _viewerCount;
+
+  // Boutons de volume
+  static const double _midVolume = 0.5;
+  static const int _viewerStep = 10;
+  double? _originalVolume;
+  bool _ignoreVolumeChange = false;
+  Timer? _volumeResetTimer;
 
   @override
   void initState() {
     super.initState();
+    _viewerCount = widget.initialViewerCount.clamp(0, widget.accountType.maxViewers);
     _initCamera();
     _startSimulation();
+    _initVolumeButtons();
   }
 
   // ── Camera ──
@@ -116,6 +133,49 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
     }
   }
 
+  // ── Boutons de volume ──
+
+  Future<void> _initVolumeButtons() async {
+    if (kIsWeb) return;
+    try {
+      _originalVolume = await FlutterVolumeController.getVolume();
+      await FlutterVolumeController.updateShowSystemUI(false);
+      await FlutterVolumeController.setVolume(_midVolume);
+      FlutterVolumeController.addListener(_onVolumeChanged, emitOnStart: false);
+    } catch (_) {
+      // Plateforme non supportée : on ignore, le slider reste utilisable.
+    }
+  }
+
+  void _onVolumeChanged(double volume) {
+    if (_ignoreVolumeChange) return;
+    final delta = volume - _midVolume;
+    if (delta.abs() < 0.01) return;
+    setState(() {
+      _viewerCount = (_viewerCount + (delta > 0 ? _viewerStep : -_viewerStep)).clamp(0, widget.accountType.maxViewers);
+    });
+
+    // Remettre le volume au milieu déclenche lui-même un événement (souvent
+    // de l'autre côté du point médian à cause des paliers de volume), qu'on
+    // ignore pendant une courte fenêtre pour éviter un double comptage.
+    _ignoreVolumeChange = true;
+    FlutterVolumeController.setVolume(_midVolume);
+    _volumeResetTimer?.cancel();
+    _volumeResetTimer = Timer(const Duration(milliseconds: 300), () {
+      _ignoreVolumeChange = false;
+    });
+  }
+
+  void _disposeVolumeButtons() {
+    if (kIsWeb) return;
+    _volumeResetTimer?.cancel();
+    FlutterVolumeController.removeListener();
+    FlutterVolumeController.updateShowSystemUI(true);
+    if (_originalVolume != null) {
+      FlutterVolumeController.setVolume(_originalVolume!);
+    }
+  }
+
   // ── Simulation ──
 
   void _startSimulation() {
@@ -131,7 +191,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
 
     _viewerTimer = Timer.periodic(const Duration(seconds: 2), (_) {
       setState(() {
-        _viewerCount = (_viewerCount + _random.nextInt(7) - 3).clamp(0, 99999);
+        _viewerCount = (_viewerCount + _random.nextInt(7) - 3).clamp(0, widget.accountType.maxViewers);
       });
     });
 
@@ -239,6 +299,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
     _cameraController?.dispose();
     _scrollController.dispose();
     _inputController.dispose();
+    _disposeVolumeButtons();
     super.dispose();
   }
 
