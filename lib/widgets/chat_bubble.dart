@@ -39,6 +39,9 @@ class ChatBubble extends StatelessWidget {
   }
 
   Widget _buildAvatar() {
+    if (message.avatarBytes != null) {
+      return CircleAvatar(radius: 16, backgroundImage: MemoryImage(message.avatarBytes!));
+    }
     if (message.avatarIndex != null) {
       return GridAvatar(index: message.avatarIndex!);
     }

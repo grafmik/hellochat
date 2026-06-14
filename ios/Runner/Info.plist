@@ -8,6 +8,8 @@
 	<string>Le micro est utilisé pour enregistrer le son de votre live.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Pour enregistrer la vidéo de votre live dans votre galerie.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Pour choisir une photo de profil depuis votre galerie.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

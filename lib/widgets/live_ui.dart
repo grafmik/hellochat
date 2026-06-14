@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 class LiveBadge extends StatelessWidget {
@@ -59,7 +60,10 @@ class ViewerCount extends StatelessWidget {
 }
 
 class StreamerAvatar extends StatelessWidget {
-  const StreamerAvatar({super.key});
+  final String pseudo;
+  final Uint8List? avatarBytes;
+
+  const StreamerAvatar({super.key, this.pseudo = 'Vous', this.avatarBytes});
 
   @override
   Widget build(BuildContext context) {
@@ -68,13 +72,16 @@ class StreamerAvatar extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: Colors.pinkAccent, width: 2),
       ),
-      child: const CircleAvatar(
+      child: CircleAvatar(
         radius: 18,
-        backgroundColor: Color(0xFF0f3460),
-        child: Text(
-          'S',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        backgroundColor: const Color(0xFF0f3460),
+        backgroundImage: avatarBytes != null ? MemoryImage(avatarBytes!) : null,
+        child: avatarBytes == null
+            ? Text(
+                pseudo[0].toUpperCase(),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              )
+            : null,
       ),
     );
   }

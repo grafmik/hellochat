@@ -1,4 +1,6 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models.dart';
 import '../theme.dart';
 import 'edit_comments_screen.dart';
@@ -19,6 +21,7 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
   bool _audienceDonations = false;
   double _viewerTarget = 50;
   final _pseudoController = TextEditingController();
+  Uint8List? _avatarBytes;
 
   // Le passage en VIP n'est pas encore implémenté : compte standard par défaut.
   static const _accountType = AccountType.standard;
@@ -27,6 +30,43 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
   void dispose() {
     _pseudoController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickAvatar() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: const Color(0xFF16213e),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera, color: accentColor),
+              title: const Text('Prendre une photo', style: TextStyle(color: Colors.white)),
+              onTap: () => Navigator.of(context).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: accentColor),
+              title: const Text('Choisir dans la galerie', style: TextStyle(color: Colors.white)),
+              onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
+    final picked = await ImagePicker().pickImage(
+      source: source,
+      maxWidth: 512,
+      maxHeight: 512,
+    );
+    if (picked == null) return;
+
+    final bytes = await picked.readAsBytes();
+    setState(() => _avatarBytes = bytes);
   }
 
   @override
@@ -146,26 +186,32 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
       ),
       child: Row(
         children: [
-          Stack(
-            children: [
-              const CircleAvatar(
-                radius: 30,
-                backgroundColor: Colors.white12,
-                child: Icon(Icons.person, color: Colors.white38, size: 32),
-              ),
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: accentColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.camera_alt, size: 14, color: Colors.black),
+          GestureDetector(
+            onTap: _pickAvatar,
+            child: Stack(
+              children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: Colors.white12,
+                  backgroundImage: _avatarBytes != null ? MemoryImage(_avatarBytes!) : null,
+                  child: _avatarBytes == null
+                      ? const Icon(Icons.person, color: Colors.white38, size: 32)
+                      : null,
                 ),
-              ),
-            ],
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: accentColor,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.camera_alt, size: 14, color: Colors.black),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -277,11 +323,16 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
       child: ElevatedButton(
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => LiveStreamScreen(
-              record: _record,
-              initialViewerCount: _viewerTarget.round(),
-              accountType: _accountType,
-            ),
+            builder: (_) {
+              final pseudo = _pseudoController.text.trim();
+              return LiveStreamScreen(
+                record: _record,
+                initialViewerCount: _viewerTarget.round(),
+                accountType: _accountType,
+                pseudo: _showProfile && pseudo.isNotEmpty ? pseudo : 'Vous',
+                avatarBytes: _showProfile ? _avatarBytes : null,
+              );
+            },
           ),
         ),
         style: ElevatedButton.styleFrom(

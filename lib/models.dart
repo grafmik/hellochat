@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 enum AccountType { standard, vip }
@@ -49,6 +50,7 @@ class ChatMessage {
   final Color color;
   final bool isOwn;
   final int? avatarIndex;
+  final Uint8List? avatarBytes;
 
   const ChatMessage({
     required this.username,
@@ -56,6 +58,7 @@ class ChatMessage {
     required this.color,
     this.isOwn = false,
     this.avatarIndex,
+    this.avatarBytes,
   });
 }
 

@@ -23,12 +23,16 @@ class LiveStreamScreen extends StatefulWidget {
   final bool record;
   final int initialViewerCount;
   final AccountType accountType;
+  final String pseudo;
+  final Uint8List? avatarBytes;
 
   const LiveStreamScreen({
     super.key,
     this.record = false,
     this.initialViewerCount = 1247,
     this.accountType = AccountType.standard,
+    this.pseudo = 'Vous',
+    this.avatarBytes,
   });
 
   @override
@@ -266,10 +270,11 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
     final text = _inputController.text.trim();
     if (text.isEmpty) return;
     _addMessage(ChatMessage(
-      username: 'Vous',
+      username: widget.pseudo,
       text: text,
       color: Colors.white,
       isOwn: true,
+      avatarBytes: widget.avatarBytes,
     ));
     _inputController.clear();
   }
@@ -387,7 +392,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
           const SizedBox(width: 8),
           ViewerCount(count: _viewerCount),
           const Spacer(),
-          const StreamerAvatar(),
+          StreamerAvatar(pseudo: widget.pseudo, avatarBytes: widget.avatarBytes),
           const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.close, color: Colors.white),
