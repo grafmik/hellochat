@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 const appBackgroundGradient = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
-  colors: [Color(0xFF1a1a2e), Color(0xFF16213e), Color(0xFF0f3460)],
+  colors: [Color(0xFF1A0828), Color(0xFF2C1054), Color(0xFF190A3A)],
 );
 
 /// Couleur d'accent commune (CTA, icônes actives, ...).
-const accentColor = Colors.cyanAccent;
+const accentColor = Color(0xFFF77737);

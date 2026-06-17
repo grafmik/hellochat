@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import '../theme.dart';
 
 class LiveBadge extends StatelessWidget {
   const LiveBadge({super.key});
@@ -70,7 +71,7 @@ class StreamerAvatar extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.pinkAccent, width: 2),
+        border: Border.all(color: accentColor, width: 2),
       ),
       child: CircleAvatar(
         radius: 18,

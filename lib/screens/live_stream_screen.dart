@@ -453,7 +453,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
           const SizedBox(width: 8),
           ActionButton(
             icon: Icons.send,
-            color: Colors.cyanAccent,
+            color: accentColor,
             onTap: _sendMessage,
           ),
         ],
