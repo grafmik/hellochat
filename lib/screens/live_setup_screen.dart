@@ -13,6 +13,8 @@ class LiveSetupScreen extends StatefulWidget {
   State<LiveSetupScreen> createState() => _LiveSetupScreenState();
 }
 
+enum _AvatarAction { camera, gallery, remove }
+
 class _LiveSetupScreenState extends State<LiveSetupScreen> {
   bool _showProfile = true;
   bool _showVerification = false;
@@ -33,7 +35,7 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
   }
 
   Future<void> _pickAvatar() async {
-    final source = await showModalBottomSheet<ImageSource>(
+    final action = await showModalBottomSheet<_AvatarAction>(
       context: context,
       backgroundColor: const Color(0xFF16213e),
       shape: const RoundedRectangleBorder(
@@ -45,21 +47,32 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
             ListTile(
               leading: const Icon(Icons.photo_camera, color: accentColor),
               title: const Text('Prendre une photo', style: TextStyle(color: Colors.white)),
-              onTap: () => Navigator.of(context).pop(ImageSource.camera),
+              onTap: () => Navigator.of(context).pop(_AvatarAction.camera),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library, color: accentColor),
               title: const Text('Choisir dans la galerie', style: TextStyle(color: Colors.white)),
-              onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+              onTap: () => Navigator.of(context).pop(_AvatarAction.gallery),
             ),
+            if (_avatarBytes != null)
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                title: const Text('Supprimer la photo', style: TextStyle(color: Colors.white)),
+                onTap: () => Navigator.of(context).pop(_AvatarAction.remove),
+              ),
           ],
         ),
       ),
     );
-    if (source == null) return;
+    if (action == null) return;
+
+    if (action == _AvatarAction.remove) {
+      setState(() => _avatarBytes = null);
+      return;
+    }
 
     final picked = await ImagePicker().pickImage(
-      source: source,
+      source: action == _AvatarAction.camera ? ImageSource.camera : ImageSource.gallery,
       maxWidth: 512,
       maxHeight: 512,
     );
