@@ -45,19 +45,7 @@ class HomeScreen extends StatelessWidget {
   Widget _buildLogo() {
     return Column(
       children: [
-        Container(
-          width: 72,
-          height: 72,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [accentColor, Colors.purpleAccent],
-            ),
-          ),
-          child: const Icon(Icons.live_tv_rounded, color: Colors.white, size: 36),
-        ),
+        Image.asset('assets/hellochat-icon.png', width: 80, height: 80),
         const SizedBox(height: 12),
         const Text(
           'HelloChat',
