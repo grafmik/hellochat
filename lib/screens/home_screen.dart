@@ -26,11 +26,6 @@ class HomeScreen extends StatelessWidget {
                       _MenuItem(icon: Icons.school_outlined, label: 'Tutoriel'),
                       const SizedBox(height: 12),
                       _MenuItem(
-                        icon: Icons.groups_outlined,
-                        label: 'Rejoindre la communauté HelloChat',
-                      ),
-                      const SizedBox(height: 12),
-                      _MenuItem(
                         icon: Icons.privacy_tip_outlined,
                         label: 'Politique de confidentialité',
                       ),
