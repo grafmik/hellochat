@@ -15,23 +15,29 @@ class HomeScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
             child: Column(
               children: [
-                const SizedBox(height: 24),
-                _buildLogo(),
-                const Spacer(),
-                _MenuItem(icon: Icons.storefront_outlined, label: 'Boutique'),
-                const SizedBox(height: 12),
-                _MenuItem(icon: Icons.school_outlined, label: 'Tutoriel'),
-                const SizedBox(height: 12),
-                _MenuItem(
-                  icon: Icons.groups_outlined,
-                  label: 'Rejoindre la communauté HelloChat',
+                Expanded(
+                  child: ListView(
+                    children: [
+                      const SizedBox(height: 24),
+                      _buildLogo(),
+                      const SizedBox(height: 48),
+                      _MenuItem(icon: Icons.storefront_outlined, label: 'Boutique'),
+                      const SizedBox(height: 12),
+                      _MenuItem(icon: Icons.school_outlined, label: 'Tutoriel'),
+                      const SizedBox(height: 12),
+                      _MenuItem(
+                        icon: Icons.groups_outlined,
+                        label: 'Rejoindre la communauté HelloChat',
+                      ),
+                      const SizedBox(height: 12),
+                      _MenuItem(
+                        icon: Icons.privacy_tip_outlined,
+                        label: 'Politique de confidentialité',
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 12),
-                _MenuItem(
-                  icon: Icons.privacy_tip_outlined,
-                  label: 'Politique de confidentialité',
-                ),
-                const SizedBox(height: 32),
                 _buildStartButton(context),
                 const SizedBox(height: 8),
               ],
