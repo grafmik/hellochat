@@ -196,6 +196,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
     });
 
     _viewerTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      if (!mounted) return;
       setState(() {
         _viewerCount = (_viewerCount + _random.nextInt(7) - 3).clamp(0, widget.accountType.maxViewers);
       });
@@ -284,6 +285,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
   // ── Hearts ──
 
   void _spawnHeart({String? emoji}) {
+    if (!mounted) return;
     setState(() {
       _hearts.add(_HeartData(
         _nextHeartId++,
