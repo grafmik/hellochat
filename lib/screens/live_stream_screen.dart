@@ -25,6 +25,7 @@ class LiveStreamScreen extends StatefulWidget {
   final AccountType accountType;
   final String pseudo;
   final Uint8List? avatarBytes;
+  final bool showVerification;
 
   const LiveStreamScreen({
     super.key,
@@ -33,6 +34,7 @@ class LiveStreamScreen extends StatefulWidget {
     this.accountType = AccountType.standard,
     this.pseudo = 'Vous',
     this.avatarBytes,
+    this.showVerification = false,
   });
 
   @override
@@ -393,6 +395,10 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
           ViewerCount(count: _viewerCount),
           const Spacer(),
           StreamerAvatar(pseudo: widget.pseudo, avatarBytes: widget.avatarBytes),
+          if (widget.showVerification) ...[
+            const SizedBox(width: 4),
+            Image.asset('assets/verified.png', width: 22, height: 22),
+          ],
           const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.close, color: Colors.white),

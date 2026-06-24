@@ -138,7 +138,8 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
                       const SizedBox(height: 12),
                       _ToggleItem(
                         icon: Icons.verified_outlined,
-                        label: 'Afficher la vérification',
+                        label: 'Vérifié',
+                        labelSuffix: Image.asset('assets/verified.png', width: 18, height: 18),
                         value: _showVerification,
                         onChanged: (v) => setState(() => _showVerification = v),
                       ),
@@ -344,6 +345,7 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
                 accountType: _accountType,
                 pseudo: _showProfile && pseudo.isNotEmpty ? pseudo : 'Vous',
                 avatarBytes: _showProfile ? _avatarBytes : null,
+                showVerification: _showVerification,
               );
             },
           ),
@@ -364,12 +366,14 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
 class _ToggleItem extends StatelessWidget {
   final IconData icon;
   final String label;
+  final Widget? labelSuffix;
   final bool value;
   final ValueChanged<bool> onChanged;
 
   const _ToggleItem({
     required this.icon,
     required this.label,
+    this.labelSuffix,
     required this.value,
     required this.onChanged,
   });
@@ -388,13 +392,21 @@ class _ToggleItem extends StatelessWidget {
           Icon(icon, color: accentColor, size: 22),
           const SizedBox(width: 16),
           Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-              ),
+            child: Row(
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                if (labelSuffix != null) ...[
+                  const SizedBox(width: 6),
+                  labelSuffix!,
+                ],
+              ],
             ),
           ),
           Switch(value: value, onChanged: onChanged, activeThumbColor: accentColor),
