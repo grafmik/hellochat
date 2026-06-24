@@ -2,9 +2,11 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models.dart';
+import '../services/vip_service.dart';
 import '../theme.dart';
 import 'edit_comments_screen.dart';
 import 'live_stream_screen.dart';
+import 'paywall_screen.dart';
 
 class LiveSetupScreen extends StatefulWidget {
   const LiveSetupScreen({super.key});
@@ -25,14 +27,27 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
   final _pseudoController = TextEditingController();
   Uint8List? _avatarBytes;
 
-  // Le passage en VIP n'est pas encore implémenté : compte standard par défaut.
-  static const _accountType = AccountType.standard;
+  AccountType get _accountType =>
+      VipService.instance.isVip ? AccountType.vip : AccountType.standard;
+
+  @override
+  void initState() {
+    super.initState();
+    VipService.instance.addListener(_onVipChanged);
+  }
 
   @override
   void dispose() {
+    VipService.instance.removeListener(_onVipChanged);
     _pseudoController.dispose();
     super.dispose();
   }
+
+  void _onVipChanged() => setState(() {});
+
+  void _openPaywall() => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const PaywallScreen()),
+      );
 
   Future<void> _pickAvatar() async {
     final action = await showModalBottomSheet<_AvatarAction>(
@@ -84,6 +99,7 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isVip = VipService.instance.isVip;
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(gradient: appBackgroundGradient),
@@ -142,6 +158,8 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
                         labelSuffix: Image.asset('assets/verified.png', width: 18, height: 18),
                         value: _showVerification,
                         onChanged: (v) => setState(() => _showVerification = v),
+                        locked: !isVip,
+                        onLockedTap: _openPaywall,
                       ),
                       const SizedBox(height: 12),
                       _ToggleItem(
@@ -156,6 +174,8 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
                         label: 'Mode Hater',
                         value: _haterMode,
                         onChanged: (v) => setState(() => _haterMode = v),
+                        locked: !isVip,
+                        onLockedTap: _openPaywall,
                       ),
                       const SizedBox(height: 12),
                       _ToggleItem(
@@ -163,19 +183,27 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
                         label: 'Dons des spectateurs',
                         value: _audienceDonations,
                         onChanged: (v) => setState(() => _audienceDonations = v),
+                        locked: !isVip,
+                        onLockedTap: _openPaywall,
                       ),
                       const SizedBox(height: 12),
                       _NavigationItem(
                         icon: Icons.chat_bubble_outline,
                         label: 'Éditer les commentaires',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const EditCommentsScreen()),
-                        ),
+                        locked: !isVip,
+                        onTap: isVip
+                            ? () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                      builder: (_) => const EditCommentsScreen()),
+                                )
+                            : _openPaywall,
                       ),
                       const SizedBox(height: 12),
                       _buildViewersSlider(),
-                      const SizedBox(height: 12),
-                      _buildLockedItem(),
+                      if (!isVip) ...[
+                        const SizedBox(height: 12),
+                        _buildLockedItem(),
+                      ],
                     ],
                   ),
                 ),
@@ -267,7 +295,7 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
               const SizedBox(width: 16),
               const Expanded(
                 child: Text(
-                  'Spectateurs cible',
+                  'Nombre de spectateurs',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 15,
@@ -285,7 +313,7 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
             ),
           ),
           Slider(
-            value: _viewerTarget,
+            value: _viewerTarget.clamp(0, _accountType.maxViewers.toDouble()),
             min: 0,
             max: _accountType.maxViewers.toDouble(),
             activeColor: accentColor,
@@ -305,28 +333,32 @@ class _LiveSetupScreenState extends State<LiveSetupScreen> {
   }
 
   Widget _buildLockedItem() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
+    return Material(
+      color: Colors.white.withValues(alpha: 0.06),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
         borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.lock_outline, color: Colors.white.withValues(alpha: 0.3), size: 22),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              'Débloquer 100 000 spectateurs',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.4),
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
+        onTap: _openPaywall,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          child: Row(
+            children: [
+              const Icon(Icons.groups_outlined, color: accentColor, size: 22),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Text(
+                  '100 000 spectateurs',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
-            ),
+              Icon(Icons.chevron_right, color: Colors.white.withValues(alpha: 0.3)),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -369,6 +401,8 @@ class _ToggleItem extends StatelessWidget {
   final Widget? labelSuffix;
   final bool value;
   final ValueChanged<bool> onChanged;
+  final bool locked;
+  final VoidCallback? onLockedTap;
 
   const _ToggleItem({
     required this.icon,
@@ -376,41 +410,52 @@ class _ToggleItem extends StatelessWidget {
     this.labelSuffix,
     required this.value,
     required this.onChanged,
+    this.locked = false,
+    this.onLockedTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
+    return Material(
+      color: Colors.white.withValues(alpha: 0.06),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
         borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: accentColor, size: 22),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Row(
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
+        onTap: locked ? onLockedTap : () => onChanged(!value),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+          child: Row(
+            children: [
+              Icon(icon, color: accentColor, size: 22),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Row(
+                  children: [
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    if (labelSuffix != null) ...[
+                      const SizedBox(width: 6),
+                      labelSuffix!,
+                    ],
+                  ],
                 ),
-                if (labelSuffix != null) ...[
-                  const SizedBox(width: 6),
-                  labelSuffix!,
-                ],
-              ],
-            ),
+              ),
+              AbsorbPointer(
+                child: Switch(
+                  value: value,
+                  onChanged: onChanged,
+                  activeThumbColor: accentColor,
+                ),
+              ),
+            ],
           ),
-          Switch(value: value, onChanged: onChanged, activeThumbColor: accentColor),
-        ],
+        ),
       ),
     );
   }
@@ -420,17 +465,19 @@ class _NavigationItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final bool locked;
 
   const _NavigationItem({
     required this.icon,
     required this.label,
     required this.onTap,
+    this.locked = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white.withValues(alpha: 0.06),
+      color: Colors.white.withValues(alpha: locked ? 0.03 : 0.06),
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
