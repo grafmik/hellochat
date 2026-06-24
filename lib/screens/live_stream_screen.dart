@@ -176,10 +176,10 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
     if (kIsWeb) return;
     _volumeResetTimer?.cancel();
     FlutterVolumeController.removeListener();
-    FlutterVolumeController.updateShowSystemUI(true);
     if (_originalVolume != null) {
       FlutterVolumeController.setVolume(_originalVolume!);
     }
+    FlutterVolumeController.updateShowSystemUI(true);
   }
 
   // ── Simulation ──
