@@ -48,6 +48,8 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/hellochat-icon.png"
+  adaptive_icon_background: "#1A0828"
+  adaptive_icon_foreground: "assets/hellochat-icon.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
