@@ -68,7 +68,8 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
 
   // Boutons de volume
   static const double _midVolume = 0.5;
-  static const int _viewerStep = 10;
+
+  int get _viewerStep => (_viewerCount * 0.1).round().clamp(1, 10000);
   double? _originalVolume;
   bool _ignoreVolumeChange = false;
   Timer? _volumeResetTimer;
