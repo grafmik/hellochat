@@ -64,12 +64,17 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
   Timer? _viewerTimer;
   Timer? _heartTimer;
   Timer? _phaseTimer;
-  late int _viewerCount;
+  Timer? _smoothTimer;
+  late int _targetViewerCount;
+  late double _displayViewerCount;
+  double _animBase = 0;
+  int _animBaseMs = 0;
+  int _animDeadlineMs = 0;
 
   // Boutons de volume
   static const double _midVolume = 0.5;
 
-  int get _viewerStep => (_viewerCount * 0.1).round().clamp(1, 10000);
+  int get _viewerStep => (_targetViewerCount * 0.1).round().clamp(1, 10000);
   double? _originalVolume;
   bool _ignoreVolumeChange = false;
   Timer? _volumeResetTimer;
@@ -77,10 +82,33 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
   @override
   void initState() {
     super.initState();
-    _viewerCount = widget.initialViewerCount.clamp(0, widget.accountType.maxViewers);
+    _targetViewerCount = widget.initialViewerCount.clamp(
+      0,
+      widget.accountType.maxViewers,
+    );
+    _displayViewerCount = _targetViewerCount.toDouble();
     _initCamera();
     _startSimulation();
     _initVolumeButtons();
+    _startSmoothTimer();
+  }
+
+  void _startSmoothTimer() {
+    _smoothTimer = Timer.periodic(const Duration(milliseconds: 50), (_) {
+      if (!mounted) return;
+      final now = DateTime.now().millisecondsSinceEpoch;
+      if (now >= _animDeadlineMs) {
+        // Pas d'animation active — fluctuations simulation en direct
+        if (_displayViewerCount != _targetViewerCount.toDouble()) {
+          setState(() => _displayViewerCount = _targetViewerCount.toDouble());
+        }
+        return;
+      }
+      final total = (_animDeadlineMs - _animBaseMs).toDouble();
+      final elapsed = (now - _animBaseMs).toDouble();
+      final t = (elapsed / total).clamp(0.0, 1.0);
+      setState(() => _displayViewerCount = _animBase + (_targetViewerCount - _animBase) * t);
+    });
   }
 
   // ── Camera ──
@@ -158,9 +186,15 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
     if (_ignoreVolumeChange) return;
     final delta = volume - _midVolume;
     if (delta.abs() < 0.01) return;
-    setState(() {
-      _viewerCount = (_viewerCount + (delta > 0 ? _viewerStep : -_viewerStep)).clamp(0, widget.accountType.maxViewers);
-    });
+    final now = DateTime.now().millisecondsSinceEpoch;
+    _animBase = _displayViewerCount;
+    _animBaseMs = now;
+    _animDeadlineMs = max(_animDeadlineMs, now) + 1000;
+    _targetViewerCount =
+        (_targetViewerCount + (delta > 0 ? _viewerStep : -_viewerStep)).clamp(
+          0,
+          widget.accountType.maxViewers,
+        );
 
     // Remettre le volume au milieu déclenche lui-même un événement (souvent
     // de l'autre côté du point médian à cause des paliers de volume), qu'on
@@ -188,19 +222,22 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
   void _startSimulation() {
     _messageTimer = Timer.periodic(const Duration(milliseconds: 900), (_) {
       final profile = profiles[_random.nextInt(profiles.length)];
-      _addMessage(ChatMessage(
-        username: profile.username,
-        text: simulatedMessages[_random.nextInt(simulatedMessages.length)],
-        color: profile.color,
-        avatarIndex: profile.avatarIndex,
-      ));
+      _addMessage(
+        ChatMessage(
+          username: profile.username,
+          text: simulatedMessages[_random.nextInt(simulatedMessages.length)],
+          color: profile.color,
+          avatarIndex: profile.avatarIndex,
+        ),
+      );
     });
 
     _viewerTimer = Timer.periodic(const Duration(seconds: 2), (_) {
       if (!mounted) return;
-      setState(() {
-        _viewerCount = (_viewerCount + _random.nextInt(7) - 3).clamp(0, widget.accountType.maxViewers);
-      });
+      _targetViewerCount = (_targetViewerCount + _random.nextInt(7) - 3).clamp(
+        0,
+        widget.accountType.maxViewers,
+      );
     });
 
     _enterQuiet();
@@ -222,10 +259,13 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
 
   void _scheduleNextHeart() {
     if (!_inBurst) return;
-    final heartsPerSecond = (_viewerCount / 400.0).clamp(1.0, 8.0);
+    final heartsPerSecond = (_targetViewerCount / 400.0).clamp(1.0, 8.0);
     final baseMs = (1000.0 / heartsPerSecond).round();
     final jitter = (baseMs * 0.4 * _random.nextDouble()).toInt();
-    final delayMs = (baseMs - jitter ~/ 2 + _random.nextInt(jitter + 1)).clamp(100, 1200);
+    final delayMs = (baseMs - jitter ~/ 2 + _random.nextInt(jitter + 1)).clamp(
+      100,
+      1200,
+    );
 
     _heartTimer = Timer(Duration(milliseconds: delayMs), () {
       if (!_inBurst) return;
@@ -243,7 +283,10 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
 
   void _addMessage(ChatMessage msg) {
     _messages.insert(0, msg);
-    _listKey.currentState?.insertItem(0, duration: const Duration(milliseconds: 300));
+    _listKey.currentState?.insertItem(
+      0,
+      duration: const Duration(milliseconds: 300),
+    );
 
     if (_messages.length > 60) {
       final removed = _messages.removeAt(60);
@@ -273,13 +316,15 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
   void _sendMessage() {
     final text = _inputController.text.trim();
     if (text.isEmpty) return;
-    _addMessage(ChatMessage(
-      username: widget.pseudo,
-      text: text,
-      color: Colors.white,
-      isOwn: true,
-      avatarBytes: widget.avatarBytes,
-    ));
+    _addMessage(
+      ChatMessage(
+        username: widget.pseudo,
+        text: text,
+        color: Colors.white,
+        isOwn: true,
+        avatarBytes: widget.avatarBytes,
+      ),
+    );
     _inputController.clear();
   }
 
@@ -288,11 +333,13 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
   void _spawnHeart({String? emoji}) {
     if (!mounted) return;
     setState(() {
-      _hearts.add(_HeartData(
-        _nextHeartId++,
-        (_random.nextDouble() - 0.5) * 64,
-        emoji ?? heartEmojis[_random.nextInt(heartEmojis.length)],
-      ));
+      _hearts.add(
+        _HeartData(
+          _nextHeartId++,
+          (_random.nextDouble() - 0.5) * 64,
+          emoji ?? heartEmojis[_random.nextInt(heartEmojis.length)],
+        ),
+      );
     });
   }
 
@@ -306,6 +353,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
     _viewerTimer?.cancel();
     _heartTimer?.cancel();
     _phaseTimer?.cancel();
+    _smoothTimer?.cancel();
     _cameraController?.dispose();
     _scrollController.dispose();
     _inputController.dispose();
@@ -374,7 +422,11 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
             ? Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.videocam_off, color: Colors.white38, size: 60),
+                  const Icon(
+                    Icons.videocam_off,
+                    color: Colors.white38,
+                    size: 60,
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     _cameraError!,
@@ -395,9 +447,12 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
         children: [
           const LiveBadge(),
           const SizedBox(width: 8),
-          ViewerCount(count: _viewerCount),
+          ViewerCount(count: _displayViewerCount.round()),
           const Spacer(),
-          StreamerAvatar(pseudo: widget.pseudo, avatarBytes: widget.avatarBytes),
+          StreamerAvatar(
+            pseudo: widget.pseudo,
+            avatarBytes: widget.avatarBytes,
+          ),
           if (widget.showVerification) ...[
             const SizedBox(width: 4),
             Image.asset('assets/verified.png', width: 22, height: 22),
@@ -429,7 +484,8 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
           reverse: true,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           initialItemCount: _messages.length,
-          itemBuilder: (_, i, animation) => _buildChatItem(_messages[i], animation),
+          itemBuilder: (_, i, animation) =>
+              _buildChatItem(_messages[i], animation),
         ),
       ),
     );
@@ -451,7 +507,10 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
                 hintStyle: const TextStyle(color: Colors.white54),
                 filled: true,
                 fillColor: Colors.white12,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
@@ -481,12 +540,14 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
           clipBehavior: Clip.none,
           alignment: Alignment.bottomCenter,
           children: _hearts
-              .map((h) => FloatingHeart(
-                    key: ValueKey(h.id),
-                    emoji: h.emoji,
-                    xDrift: h.xDrift,
-                    onComplete: () => _removeHeart(h.id),
-                  ))
+              .map(
+                (h) => FloatingHeart(
+                  key: ValueKey(h.id),
+                  emoji: h.emoji,
+                  xDrift: h.xDrift,
+                  onComplete: () => _removeHeart(h.id),
+                ),
+              )
               .toList(),
         ),
       ),
